@@ -8,11 +8,13 @@ from DAXXMUSIC import app
 from lexica.constants import languageModels
 from typing import Union, Tuple
 
+# Initialize AsyncClient globally to optimize performance
+client = AsyncClient()
+
 # Use typing.Union for compatibility with Python versions < 3.10
 async def ChatCompletion(prompt, model) -> Union[Tuple[str, list], str]:
     try:
         modelInfo = getattr(languageModels, model)
-        client = AsyncClient()
         output = await client.ChatCompletion(prompt, modelInfo)
         if model == "bard":
             return output['content'], output['images']
@@ -23,26 +25,32 @@ async def ChatCompletion(prompt, model) -> Union[Tuple[str, list], str]:
 async def geminiVision(prompt, model, images) -> Union[Tuple[str, list], str]:
     imageInfo = []
     for image in images:
-        with open(image, "rb") as imageFile:
-            data = base64.b64encode(imageFile.read()).decode("utf-8")
-            mime_type, _ = mimetypes.guess_type(image)
-            imageInfo.append({
-                "data": data,
-                "mime_type": mime_type
-            })
-        os.remove(image)
-    payload = {
-        "images": imageInfo
-    }
-    modelInfo = getattr(languageModels, model)
-    client = AsyncClient()
-    output = await client.ChatCompletion(prompt, modelInfo, json=payload)
-    return output['content']['parts'][0]['text']
+        try:
+            with open(image, "rb") as imageFile:
+                data = base64.b64encode(imageFile.read()).decode("utf-8")
+                mime_type, _ = mimetypes.guess_type(image)
+                if mime_type not in ['image/png', 'image/jpg', 'image/jpeg']:
+                    raise Exception(f"Invalid mime type for image: {mime_type}")
+                imageInfo.append({
+                    "data": data,
+                    "mime_type": mime_type
+                })
+        except Exception as e:
+            raise Exception(f"Error processing image {image}: {e}")
+        finally:
+            os.remove(image)  # Ensure removal even if there's an error
+    payload = {"images": imageInfo}
+    try:
+        modelInfo = getattr(languageModels, model)
+        output = await client.ChatCompletion(prompt, modelInfo, json=payload)
+        return output['content']['parts'][0]['text']
+    except Exception as E:
+        raise Exception(f"API error: {E}")
 
 def getMedia(message):
     """Extract Media"""
     media = message.media if message.media else message.reply_to_message.media if message.reply_to_message else None
-    if message.media:
+    if media:
         if message.photo:
             media = message.photo
         elif message.document and message.document.mime_type in ['image/png', 'image/jpg', 'image/jpeg'] and message.document.file_size < 5242880:
@@ -56,8 +64,6 @@ def getMedia(message):
             media = message.reply_to_message.document
         else:
             media = None
-    else:
-        media = None
     return media
 
 def getText(message):
@@ -91,19 +97,20 @@ async def chatbots(_, m: t.Message):
         for i in images:
             media.append(t.InputMediaPhoto(i))
         media[0] = t.InputMediaPhoto(images[0], caption=output)
-        await _.send_media_group(
-            m.chat.id,
-            media,
-            reply_to_message_id=m.id
-        )
+        await _.send_media_group(m.chat.id, media, reply_to_message_id=m.id)
         return
     await m.reply_text(output['parts'][0]['text'] if model == "gemini" else output)
 
 async def askAboutImage(_, m: t.Message, mediaFiles: list, prompt: str):
     images = []
     for media in mediaFiles:
-        image = await _.download_media(media.file_id, file_name=f'./downloads/{m.from_user.id}_ask.jpg')
-        images.append(image)
-    output = await geminiVision(prompt if prompt else "What's this?", "geminiVision", images)
-    await m.reply_text(output)
-    
+        try:
+            image = await _.download_media(media.file_id, file_name=f'./downloads/{m.from_user.id}_ask.jpg')
+            images.append(image)
+        except Exception as e:
+            return await m.reply_text(f"Error downloading media: {e}")
+    try:
+        output = await geminiVision(prompt if prompt else "What's this?", "geminiVision", images)
+        await m.reply_text(output)
+    except Exception as e:
+        await m.reply_text(f"Error processing image: {e}")
