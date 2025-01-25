@@ -1,15 +1,18 @@
 from telegram import Update, Bot
 import httpx
+import logging
 
 from DAXXMUSIC import app
 from pyrogram import filters
-
 
 DOWNLOADING_STICKER_ID = (
     "CAACAgEAAx0CfD7LAgACO7xmZzb83lrLUVhxtmUaanKe0_ionAAC-gADUSkNORIJSVEUKRrhHgQ"
 )
 API_URL = "https://karma-api2.vercel.app/instadl"  # Replace with your actual API URL
 
+# Set up logging for better error tracking
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @app.on_message(filters.command(["ig", "insta"]))
 async def instadl_command_handler(client, message):
@@ -18,6 +21,12 @@ async def instadl_command_handler(client, message):
         return
 
     link = message.command[1]
+
+    # Validate Instagram URL format (simple validation)
+    if not link.startswith("https://www.instagram.com/"):
+        await message.reply_text("Invalid Instagram URL. Please provide a valid link.")
+        return
+
     try:
         downloading_sticker = await message.reply_sticker(DOWNLOADING_STICKER_ID)
 
@@ -46,10 +55,20 @@ async def instadl_command_handler(client, message):
                 "Unable to fetch content. Please check the Instagram URL or try with another Instagram link."
             )
 
-    except Exception as e:
-        print(e)
+    except httpx.RequestError as e:
+        logger.error(f"HTTP request error: {e}")
         await message.reply_text(
-            "An error occurred while processing the request."
+            "An error occurred while processing the request. Please try again later."
+        )
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error: {e}")
+        await message.reply_text(
+            "Error while fetching data from Instagram. Please try again later."
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        await message.reply_text(
+            "An unexpected error occurred. Please try again later."
         )
 
     finally:
