@@ -1,16 +1,18 @@
-"""
-LAND LELO CODE
-
-"""
-
-
-
+import os
 import requests
 from pyrogram import Client, filters
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+from urllib.parse import urlparse
 from DAXXMUSIC import app
 
+def is_valid_url(url):
+    """Check if the provided string is a valid URL."""
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except ValueError:
+        return False
 
 def download_website(url):
     headers = {
@@ -28,10 +30,8 @@ def download_website(url):
         else:
             return f"Failed to download source code. Status code: {response.status_code}"
 
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         return f"An error occurred: {str(e)}"
-
-
 
 # Handler for /webdl command to download website source code
 @app.on_message(filters.command("webdl"))
@@ -44,13 +44,24 @@ def web_download(client, message):
     # Get the URL after /webdl command
     url = message.command[1]
 
+    # Validate the URL
+    if not is_valid_url(url):
+        message.reply_text("Please provide a valid URL.")
+        return
+
+    # Download the website source code
     source_code = download_website(url)
+    
     if source_code.startswith('An error occurred') or source_code.startswith('Failed to download'):
         message.reply_text(source_code)
     else:
         # Save the source code to a file
-        with open('website.txt', 'w', encoding='utf-8') as file:
+        file_path = 'website.txt'
+        with open(file_path, 'w', encoding='utf-8') as file:
             file.write(source_code)
 
-        # Reply with the file
-        message.reply_document(document='website.txt', caption=f"Source code of {url}")
+        # Send the file to the user
+        message.reply_document(document=file_path, caption=f"Source code of {url}")
+        
+        # Clean up the file after sending
+        os.remove(file_path)
