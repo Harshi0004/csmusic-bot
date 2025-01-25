@@ -2,6 +2,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from DAXXMUSIC import app
 
+# Handler to get group information using group username
 @app.on_message(filters.command("groupinfo", prefixes="/"))
 async def get_group_status(_, message: Message):
     if len(message.command) != 2:
@@ -18,7 +19,7 @@ async def get_group_status(_, message: Message):
     
     total_members = await app.get_chat_members_count(group.id)
     group_description = group.description
-    premium_acc = banned = deleted_acc = bot = 0  # You should replace these variables with actual counts.
+    premium_acc = banned = deleted_acc = bot = 0  # Replace these variables with actual counts.
 
     response_text = (
         f"➖➖➖➖➖➖➖\n"
@@ -27,52 +28,25 @@ async def get_group_status(_, message: Message):
         f"➲ TOTAL MEMBERS : {total_members}\n"
         f"➲ DESCRIPTION : {group_description or 'N/A'}\n"
         f"➲ USERNAME : @{group_username}\n"
-       
         f"➖➖➖➖➖➖➖"
     )
     
     await message.reply(response_text)
 
 
-
-
-
-
-# Command handler to get group status
+# Handler to get the basic status of the group
 @app.on_message(filters.command("status") & filters.group)
-def group_status(client, message):
+async def group_status(client, message):
     chat = message.chat  # Chat where the command was sent
     status_text = f"Group ID: {chat.id}\n" \
                   f"Title: {chat.title}\n" \
                   f"Type: {chat.type}\n"
-                  
+    
     if chat.username:  # Not all groups have a username
         status_text += f"Username: @{chat.username}"
     else:
         status_text += "Username: None"
+    
+    await message.reply_text(status_text)
 
-    message.reply_text(status_text)
-
-
-#########
-
-""" ***                                                                       
-────────────────────────────────────────────────────────────────────────
-─████████████────██████████████──████████──████████──████████──████████─
-─██░░░░░░░░████──██░░░░░░░░░░██──██░░░░██──██░░░░██──██░░░░██──██░░░░██─
-─██░░████░░░░██──██░░██████░░██──████░░██──██░░████──████░░██──██░░████─
-─██░░██──██░░██──██░░██──██░░██────██░░░░██░░░░██──────██░░░░██░░░░██───
-─██░░██──██░░██──██░░██████░░██────████░░░░░░████──────████░░░░░░████───
-─██░░██──██░░██──██░░░░░░░░░░██──────██░░░░░░██──────────██░░░░░░██─────
-─██░░██──██░░██──██░░██████░░██────████░░░░░░████──────████░░░░░░████───
-─██░░██──██░░██──██░░██──██░░██────██░░░░██░░░░██──────██░░░░██░░░░██───
-─██░░████░░░░██──██░░██──██░░██──████░░██──██░░████──████░░██──██░░████─
-─██░░░░░░░░████──██░░██──██░░██──██░░░░██──██░░░░██──██░░░░██──██░░░░██─
-─████████████────██████──██████──████████──████████──████████──████████─
-────────────────────────────────────────────────────────────────────────**"""
-
-
-
-
-####
 
