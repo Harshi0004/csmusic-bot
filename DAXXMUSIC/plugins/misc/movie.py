@@ -2,7 +2,7 @@ import aiohttp
 from pyrogram import Client, filters
 from DAXXMUSIC import app
 
-TMDB_API_KEY = "23c3b139c6d59ebb608fe6d5b974d888"
+TMDB_API_KEY = "cdad3592c2b02b884527c3c1bc011838"
 
 # Function to fetch movie info from TMDB API
 async def get_movie_info(movie_name):
