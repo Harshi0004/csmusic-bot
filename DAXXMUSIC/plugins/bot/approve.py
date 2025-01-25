@@ -9,7 +9,10 @@ from typing import Union, Optional
 
 # --------------------------------------------------------------------------------- #
 
+# Helper function to get the font for the image
 get_font = lambda font_size, font_path: ImageFont.truetype(font_path, font_size)
+
+# Helper function to resize the text if it exceeds a certain size
 resize_text = (
     lambda text_size, text: (text[:text_size] + "...").upper()
     if len(text) > text_size
@@ -18,6 +21,7 @@ resize_text = (
 
 # --------------------------------------------------------------------------------- #
 
+# Function to generate user information image
 async def get_userinfo_img(
     bg_path: str,
     font_path: str,
@@ -27,18 +31,22 @@ async def get_userinfo_img(
     bg = Image.open(bg_path)
 
     if profile_path:
-        img = Image.open(profile_path)
-        mask = Image.new("L", img.size, 0)
-        draw = ImageDraw.Draw(mask)
-        draw.pieslice([(0, 0), img.size], 0, 360, fill=255)
+        try:
+            img = Image.open(profile_path)
+            mask = Image.new("L", img.size, 0)
+            draw = ImageDraw.Draw(mask)
+            draw.pieslice([(0, 0), img.size], 0, 360, fill=255)
 
-        circular_img = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        circular_img.paste(img, (0, 0), mask)
-        resized = circular_img.resize((400, 400))
-        bg.paste(resized, (440, 160), resized)
-
+            circular_img = Image.new("RGBA", img.size, (0, 0, 0, 0))
+            circular_img.paste(img, (0, 0), mask)
+            resized = circular_img.resize((400, 400))
+            bg.paste(resized, (440, 160), resized)
+        except Exception as e:
+            print(f"Error while processing profile photo: {e}")
+    
     img_draw = ImageDraw.Draw(bg)
 
+    # Adding user ID text to the image
     img_draw.text(
         (529, 627),
         text=str(user_id).upper(),
@@ -64,26 +72,30 @@ CHAT_ID = [int(app) for app in chat_id_env.split(",")] if chat_id_env else []
 TEXT = environ.get("APPROVED_WELCOME_TEXT", "**❅─────✧❅✦❅✧─────❅**\n**🥀ʜᴇʏ {mention}**\n\n**🏓ᴡᴇʟᴄᴏᴍᴇ ɪɴ ɴᴇᴡ ɢʀᴏᴜᴘ✨**\n\n**➻** {title}\n\n**💞ɴᴏᴡ ᴍᴀᴋᴇ ɴᴇᴡ ғʀɪᴇɴᴅs ᴀɴᴅ sᴛᴀʏ ᴀʟᴡᴀʏs ᴏɴʟɪɴᴇ ɪɴ ᴛʜɪs ɢʀᴏᴜᴘ🥳**\n**❅─────✧❅✦❅✧─────❅**")
 APPROVED = environ.get("APPROVED_WELCOME", "on").lower()
 
-# List of random photo links
+# List of random photo links (can be expanded)
 random_photo_links = [
     "https://telegra.ph/file/ca950c0b8316b968957fa.jpg",
     "https://telegra.ph/file/ca950c0b8316b968957fa.jpg",
     "https://telegra.ph/file/ca950c0b8316b968957fa.jpg",
-    # Add more links as needed
 ]
 
-# Define an event handler for chat join requests
+# --------------------------------------------------------------------------------- #
+
+# Define the event handler for chat join requests
 @app.on_chat_join_request((filters.group | filters.channel) & filters.chat(CHAT_ID) if CHAT_ID else (filters.group | filters.channel))
 async def autoapprove(client: app, message: ChatJoinRequest):
-    chat = message.chat  # Chat
-    user = message.from_user  # User
+    chat = message.chat  # Chat object
+    user = message.from_user  # User object
 
-    # Check if user has a profile photo
+    # Check if the user has a profile photo
     photo = None
     if user.photo:
-        photo = await app.download_media(user.photo.big_file_id)
+        try:
+            photo = await app.download_media(user.photo.big_file_id)
+        except Exception as e:
+            print(f"Error downloading profile photo: {e}")
 
-    # Fix the indentation here
+    # Generate user information image
     welcome_photo = await get_userinfo_img(
         bg_path=bg_path,
         font_path=font_path,
@@ -91,10 +103,12 @@ async def autoapprove(client: app, message: ChatJoinRequest):
         profile_path=photo,
     )
 
-    print(f"{user.first_name} Joined 🤝")  # Logs
+    print(f"{user.first_name} Joined 🤝")  # Logs user joining
 
+    # Approve the chat join request
     await client.approve_chat_join_request(chat_id=chat.id, user_id=user.id)
 
+    # If approved welcome message is enabled, send a custom welcome message
     if APPROVED == "on":
         await client.send_photo(
             chat_id=chat.id,
@@ -108,5 +122,4 @@ async def autoapprove(client: app, message: ChatJoinRequest):
                     ]
                 ]
             ),
-    )
-    
+        )
