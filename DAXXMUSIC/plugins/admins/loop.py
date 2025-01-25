@@ -12,9 +12,12 @@ from config import BANNED_USERS
 @AdminRightsCheck
 async def admins(cli, message: Message, _, chat_id):
     usage = _["admin_17"]
+    
     if len(message.command) != 2:
         return await message.reply_text(usage)
+
     state = message.text.split(None, 1)[1].strip()
+
     if state.isnumeric():
         state = int(state)
         if 1 <= state <= 10:
@@ -30,6 +33,7 @@ async def admins(cli, message: Message, _, chat_id):
             )
         else:
             return await message.reply_text(_["admin_17"])
+
     elif state.lower() == "enable":
         await set_loop(chat_id, 10)
         return await message.reply_text(
