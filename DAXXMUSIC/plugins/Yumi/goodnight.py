@@ -1,24 +1,24 @@
-import re
-from dotenv import load_dotenv
-from pyrogram import filters
 import random
+from pyrogram import filters
 from pyrogram.types import Message
-from pyrogram import Client, filters
+from pyrogram import Client
 from DAXXMUSIC import app
 
-
-
-# "/gn" command ka handler
-@app.on_message(filters.command("oodnight", prefixes="g"))
-def goodnight_command_handler(client: Client, message: Message):
+# "/oodnight" command handler
+@app.on_message(filters.command("oodnight"))
+async def goodnight_command_handler(client: Client, message: Message):
     # Randomly decide whether to send a sticker or an emoji
     send_sticker = random.choice([True, False])
     
-    # Send a sticker or an emoji based on the random choice
-    if send_sticker:
-        client.send_sticker(message.chat.id, get_random_sticker())
-    else:
-        client.send_message(message.chat.id, get_random_emoji())
+    try:
+        if send_sticker:
+            # Send a random sticker
+            await client.send_sticker(message.chat.id, get_random_sticker())
+        else:
+            # Send a random emoji
+            await client.send_message(message.chat.id, get_random_emoji())
+    except Exception as e:
+        await message.reply_text(f"Error occurred: {e}")
 
 # Function to get a random sticker
 def get_random_sticker():
@@ -37,6 +37,5 @@ def get_random_emoji():
         "😴",
         "😪", 
         "💤",
-        
     ]
     return random.choice(emojis)
