@@ -1,0 +1,15 @@
+version: '3.8'  # Specify the version of the Docker Compose file format
+
+services:
+  app:  # Name of the service
+    build:  # Build configuration
+      context: .  # The context is the current directory
+      dockerfile: Dockerfile  # Name of the Dockerfile
+    volumes:
+      - .:/app  # Bind mount the current directory to /app in the container
+    ports:
+      - "7574:7574"  # Map port 8080 on the host to port 8080 on the container
+    environment:
+      # Add any necessary environment variables here
+      - ENV_VAR_NAME=value  # Example of setting an environment variable
+    command: bash start  # Command to run the application
