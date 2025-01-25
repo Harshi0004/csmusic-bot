@@ -1,6 +1,5 @@
 import asyncio
 import random
-
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.raw.functions.messages import DeleteHistory
@@ -10,44 +9,56 @@ from DAXXMUSIC.core.userbot import assistants
 
 @app.on_message(filters.command("sg"))
 async def sg(client: Client, message: Message):
-    if len(message.text.split()) < 1 and not message.reply_to_message:
-        return await message.reply("sg username/id/reply")
+    # Check if the command has valid arguments or is a reply
+    if len(message.text.split()) < 2 and not message.reply_to_message:
+        return await message.reply("Usage: /sg <username/id> or reply to a user's message")
+
+    # Get the user ID either from the command or the replied message
     if message.reply_to_message:
-        args = message.reply_to_message.from_user.id
+        user_id = message.reply_to_message.from_user.id
     else:
-        args = message.text.split()[1]
-    lol = await message.reply("<code>Processing...</code>")
-    if args:
-        try:
-            user = await client.get_users(f"{args}")
-        except Exception:
-            return await lol.edit("<code>Please specify a valid user!</code>")
-    bo = ["sangmata_bot", "sangmata_beta_bot"]
-    sg = random.choice(bo)
+        user_id = message.text.split()[1]
+
+    # Send a processing message
+    processing_message = await message.reply("<code>Processing...</code>")
+
+    try:
+        # Try fetching the user information
+        user = await client.get_users(user_id)
+    except Exception:
+        return await processing_message.edit("<code>Please specify a valid user!</code>")
+
+    # List of bot names
+    bots = ["sangmata_bot", "sangmata_beta_bot"]
+    selected_bot = random.choice(bots)
+
+    # Check if assistants are available and select the userbot
     if 1 in assistants:
         ubot = us.one
-    
+
     try:
-        a = await ubot.send_message(sg, f"{user.id}")
-        await a.delete()
+        # Send the user ID to the selected bot
+        sent_message = await ubot.send_message(selected_bot, f"{user.id}")
+        await sent_message.delete()
     except Exception as e:
-        return await lol.edit(e)
+        return await processing_message.edit(f"<code>Error: {str(e)}</code>")
+
+    # Wait and fetch the message from the bot
     await asyncio.sleep(1)
-    
-    async for stalk in ubot.search_messages(a.chat.id):
-        if stalk.text == None:
-            continue
-        if not stalk:
-            await message.reply("botnya ngambek")
+
+    async for stalk in ubot.search_messages(sent_message.chat.id):
+        if stalk.text is None:
+            continue  # Skip empty messages
         elif stalk:
             await message.reply(f"{stalk.text}")
-            break  # Exit the loop after displaying one message
-    
+            break  # Exit after the first valid message
+
+    # Attempt to delete chat history for the selected bot
     try:
-        user_info = await ubot.resolve_peer(sg)
+        user_info = await ubot.resolve_peer(selected_bot)
         await ubot.send(DeleteHistory(peer=user_info, max_id=0, revoke=True))
     except Exception:
-        pass
-    
-    await lol.delete()
-    
+        pass  # Ignore any error during history deletion
+
+    # Delete the processing message after completing the task
+    await processing_message.delete()
