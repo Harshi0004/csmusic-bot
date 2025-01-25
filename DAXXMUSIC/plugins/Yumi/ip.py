@@ -1,5 +1,5 @@
-from pyrogram import Client, filters
 import requests
+from pyrogram import Client, filters
 from DAXXMUSIC import app
 
 IPINFO_TOKEN = '434e1cea389a93'
@@ -8,10 +8,13 @@ IPQUALITYSCORE_API_KEY = 'Y0OZMypz71dEF9HxxQd21J2xvqUE0BVS'
 @app.on_message(filters.command(["ip"]))
 def ip_info_and_score(_, message):
     if len(message.command) != 2:
-        message.reply_text("ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀɴ **ɪᴘ** ᴀᴅᴅʀᴇss ᴀғᴛᴇʀ ᴛʜᴇ ᴄᴏᴍᴍᴀɴᴅ. ᴇxᴀᴍᴘʟᴇ**:** /ip 8.8.8.8")
-        return
-
+        return message.reply_text("ᴘʟᴇᴀsᴇ ᴘʀᴏᴠɪᴅᴇ ᴀɴ **ɪᴘ** ᴀᴅᴅʀᴇss ᴀғᴛᴇʀ ᴛʜᴇ ᴄᴏᴍᴍᴀɴᴅ. ᴇxᴀᴍᴘʟᴇ**:** /ip 8.8.8.8")
+    
     ip_address = message.command[1]
+    
+    if not valid_ip(ip_address):
+        return message.reply_text("**Invalid IP Address Format!** Please provide a valid IP address.")
+    
     ip_info = get_ip_info(ip_address)
     ip_score, score_description, emoji = get_ip_score(ip_address, IPQUALITYSCORE_API_KEY)
 
@@ -20,9 +23,15 @@ def ip_info_and_score(_, message):
             f"{ip_info}\n\n"
             f"**𝗜ᴘ sᴄᴏʀᴇ** ➪ {ip_score} {emoji} ({score_description})"
         )
-        message.reply_text(response_message)
+        return message.reply_text(response_message)
     else:
-        message.reply_text("Unable to fetch information for the provided IP address.")
+        return message.reply_text("Unable to fetch information for the provided IP address.")
+
+def valid_ip(ip_address):
+    """ Check if the provided IP address is valid """
+    import re
+    pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+    return bool(re.match(pattern, ip_address))
 
 def get_ip_info(ip_address):
     api_url = f"https://ipinfo.io/{ip_address}?token={IPINFO_TOKEN}"
@@ -56,13 +65,13 @@ def get_ip_score(ip_address, api_key):
                 fraud_score = int(fraud_score)
                 if fraud_score <= 20:
                     score_description = 'Good'
-                    emoji = '✅'
+                    emoji = '🟢'
                 elif fraud_score <= 60:
                     score_description = 'Moderate'
-                    emoji = '⚠️'
+                    emoji = '🟡'
                 else:
                     score_description = 'Bad'
-                    emoji = '❌'
+                    emoji = '🔴'
                 return fraud_score, score_description, emoji
     except Exception as e:
         print(f"Error fetching IP score: {e}")
