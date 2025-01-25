@@ -22,22 +22,36 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.***
 """
 
-import requests
+import aiohttp
 from DAXXMUSIC import app
 from pyrogram import filters
 
+async def fetch_fake_user_data(query):
+    url = f"https://randomuser.me/api/?nat={query}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    return None  # Return None if the response is not OK
+                data = await response.json()
+                return data.get("results", [])
+    except Exception as e:
+        print(f"Error fetching data: {str(e)}")
+        return None
 
 @app.on_message(filters.command("fake"))
 async def address(_, message):
+    if len(message.command) < 2:
+        await message.reply_text("Please provide a country code, e.g., `/fake us`.")
+        return
+
     query = message.text.split(maxsplit=1)[1].strip()
-    url = f"https://randomuser.me/api/?nat={query}"
-    response = requests.get(url)
-    data = response.json()
 
-    if "results" in data:
-        user_data = data["results"][0]
+    user_data_list = await fetch_fake_user_data(query)
 
-        
+    if user_data_list:
+        user_data = user_data_list[0]
+
         name = f"{user_data['name']['title']} {user_data['name']['first']} {user_data['name']['last']}"
         address = f"{user_data['location']['street']['number']} {user_data['location']['street']['name']}" 
         city = user_data['location']['city']
@@ -48,7 +62,6 @@ async def address(_, message):
         phone = user_data['phone']
         picture_url = user_data['picture']['large']
 
-        
         caption = f"""
 ﹝⌬﹞**ɴᴀᴍᴇ** ⇢ {name}
 ﹝⌬﹞**ᴀᴅᴅʀᴇss** ⇢ {address}
@@ -58,10 +71,8 @@ async def address(_, message):
 ﹝⌬﹞**ᴘᴏsᴛᴀʟ** ⇢ {postal}
 ﹝⌬﹞**ᴇᴍᴀɪʟ** ⇢ {email}
 ﹝⌬﹞**ᴘʜᴏɴᴇ** ⇢ {phone}
-
         """
 
-        
         await message.reply_photo(photo=picture_url, caption=caption)
     else:
-        await message.reply_text("ᴏᴏᴘs ɴᴏᴛ ғᴏᴜɴᴅ ᴀɴʏ ᴀᴅᴅʀᴇss.")
+        await message.reply_text("Oops, no fake address found. Please try again later.")
