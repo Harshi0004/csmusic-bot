@@ -6,29 +6,36 @@ from DAXXMUSIC import app
 
 SUPPORT_CHAT = "ALLTYPECC"
 
+def get_wish_animation():
+    try:
+        api = requests.get("https://nekos.best/api/v2/happy").json()
+        return api["results"][0]['url']
+    except (requests.exceptions.RequestException, KeyError):
+        return "https://example.com/fallback_animation.gif"  # Replace with a default/fallback animation URL
+
 @app.on_message(filters.command("wish"))
 async def wish(_, m):
     if len(m.command) < 2:
         await m.reply("ᴀᴅᴅ ᴡɪꜱʜ ʙᴀʙʏ🥀!")
         return 
 
-    api = requests.get("https://nekos.best/api/v2/happy").json()
-    url = api["results"][0]['url']
     text = m.text.split(None, 1)[1]
     wish_count = random.randint(1, 100)
     wish = f"✨ ʜᴇʏ! {m.from_user.first_name}! "
     wish += f"✨ ʏᴏᴜʀ ᴡɪꜱʜ: {text} "
     wish += f"✨ ᴘᴏꜱꜱɪʙʟᴇ ᴛᴏ: {wish_count}%"
     
+    animation_url = get_wish_animation()
+    
     await app.send_animation(
         chat_id=m.chat.id,
-        animation=url,
+        animation=animation_url,
         caption=wish,
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ", url=f"https://t.me/{SUPPORT_CHAT}")]])
+            [[InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ", url=f"https://t.me/{SUPPORT_CHAT}")]]
+        )
     )
-            
-    
+
 BUTTON = [[InlineKeyboardButton("ꜱᴜᴘᴘᴏʀᴛ", url=f"https://t.me/{SUPPORT_CHAT}")]]
 CUTIE = "https://64.media.tumblr.com/d701f53eb5681e87a957a547980371d2/tumblr_nbjmdrQyje1qa94xto1_500.gif"
 
